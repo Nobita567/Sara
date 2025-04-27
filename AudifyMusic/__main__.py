@@ -11,6 +11,13 @@ from AudifyMusic.misc import sudo
 from AudifyMusic.plugins import ALL_MODULES
 from AudifyMusic.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
+# In AudifyMusic/__main__.py, add:
+from AudifyMusic.misc import heroku
+…
+async def init():
+    heroku()               # ← add this
+    await sudo()
+    …
 
 
 async def init():

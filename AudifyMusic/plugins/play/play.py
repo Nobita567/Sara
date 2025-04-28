@@ -454,7 +454,7 @@ if result is None:
     return await CallbackQuery.answer("Unable to determine chat/channel", show_alert=True)
 chat_id, channel = result
 
-    except:
+    except Exception:
         return
     user_name = CallbackQuery.from_user.first_name
     try:

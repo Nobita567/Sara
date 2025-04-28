@@ -287,7 +287,7 @@ async def play_commnd(
                 return await mystic.edit_text(err)
             return await mystic.delete()
         else:
-            try:
+                        try:
                 await Audify.stream_call(url)
             except NoActiveGroupCall:
                 await mystic.edit_text(_["black_9"])
@@ -295,12 +295,11 @@ async def play_commnd(
                     chat_id=config.LOGGER_ID,
                     text=_["play_17"],
                 )
-            import traceback
-
-except Exception as e:
-    tb = traceback.format_exc()                           # show full traceback
-    msg = _["general_2"].format(type(e).__name__)
-    return await mystic.edit_text(f"{msg}\n\n```{tb}```")
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                msg = _["general_2"].format(type(e).__name__)
+                return await mystic.edit_text(f"{msg}\n\n```{tb}```")
 
             await mystic.edit_text(_["str_2"])
             try:
@@ -308,6 +307,7 @@ except Exception as e:
                     _,
                     mystic,
                     message.from_user.id,
+
                     url,
                     chat_id,
                     message.from_user.first_name,

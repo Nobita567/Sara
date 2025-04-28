@@ -295,8 +295,13 @@ async def play_commnd(
                     chat_id=config.LOGGER_ID,
                     text=_["play_17"],
                 )
-            except Exception as e:
-                return await mystic.edit_text(_["general_2"].format(type(e).__name__))
+            import traceback
+
+except Exception as e:
+    tb = traceback.format_exc()                           # show full traceback
+    msg = _["general_2"].format(type(e).__name__)
+    return await mystic.edit_text(f"{msg}\n\n```{tb}```")
+
             await mystic.edit_text(_["str_2"])
             try:
                 await stream(
@@ -444,7 +449,11 @@ async def play_music(client, CallbackQuery, _):
         except:
             return
     try:
-        chat_id, channel = await get_channeplayCB(_, cplay, CallbackQuery)
+        result = await get_channeplayCB(_, cplay, CallbackQuery)
+if result is None:
+    return await CallbackQuery.answer("Unable to determine chat/channel", show_alert=True)
+chat_id, channel = result
+
     except:
         return
     user_name = CallbackQuery.from_user.first_name

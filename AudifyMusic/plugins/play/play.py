@@ -287,8 +287,8 @@ async def play_commnd(
                 return await mystic.edit_text(err)
             return await mystic.delete()
         else:
-                        try:
-                await Audify.stream_call(url)
+             try:
+                 await Audify.stream_call(url)
             except NoActiveGroupCall:
                 await mystic.edit_text(_["black_9"])
                 return await app.send_message(

@@ -1,5 +1,4 @@
 import asyncio
-
 from pyrogram import filters
 from pyrogram.enums import ChatMembersFilter
 from pyrogram.errors import FloodWait
@@ -19,151 +18,159 @@ from config import adminlist
 
 IS_BROADCASTING = False
 
-
 @app.on_message(filters.command("broadcast") & SUDOERS)
 @language
-async def braodcast_message(client, message, _):
+async def broadcast_message(client, message, _):
     global IS_BROADCASTING
+
+    # 1) Determine what we’re broadcasting: either a forwarded reply or plain text
     if message.reply_to_message:
-        x = message.reply_to_message.id
-        y = message.chat.id
+        to_forward_id = message.reply_to_message.id
+        source_chat   = message.chat.id
+        query_text    = None
     else:
         if len(message.command) < 2:
             return await message.reply_text(_["broad_2"])
-        query = message.text.split(None, 1)[1]
-        if "-pin" in query:
-            query = query.replace("-pin", "")
-        if "-nobot" in query:
-            query = query.replace("-nobot", "")
-        if "-pinloud" in query:
-            query = query.replace("-pinloud", "")
-        if "-assistant" in query:
-            query = query.replace("-assistant", "")
-        if "-user" in query:
-            query = query.replace("-user", "")
-        if query == "":
+        # extract text and strip any flags from it
+        raw = message.text.split(None, 1)[1]
+        for flag in ("-pin", "-pinloud", "-nobot", "-assistant", "-user"):
+            raw = raw.replace(flag, "")
+        query_text = raw.strip()
+        if not query_text:
             return await message.reply_text(_["broad_8"])
+        to_forward_id = None
+        source_chat   = None
+
+    # 2) Parse flags from the original message
+    txt = message.text.lower()
+    flags = {
+        "nobot":     "-nobot"     in txt,
+        "pin":       "-pin"       in txt,
+        "pinloud":   "-pinloud"   in txt,
+        "user":      "-user"      in txt,
+        "assistant": "-assistant" in txt,
+    }
 
     IS_BROADCASTING = True
     await message.reply_text(_["broad_1"])
 
-    if "-nobot" not in message.text:
-        sent = 0
-        pin = 0
-        chats = []
+    # 3a) Broadcast to all served chats (the “bot” level)
+    if not flags["nobot"]:
+        sent, pinned = 0, 0
         schats = await get_served_chats()
-        for chat in schats:
-            chats.append(int(chat["chat_id"]))
-        for i in chats:
+        for row in schats:
+            cid = int(row["chat_id"])
             try:
-                m = (
-                    await app.forward_messages(i, y, x)
-                    if message.reply_to_message
-                    else await app.send_message(i, text=query)
-                )
-                if "-pin" in message.text:
+                # forward vs send
+                if to_forward_id:
+                    m = await app.forward_messages(cid, source_chat, to_forward_id)
+                else:
+                    m = await app.send_message(cid, query_text)
+
+                # pin if requested
+                if flags["pin"]:
                     try:
                         await m.pin(disable_notification=True)
-                        pin += 1
+                        pinned += 1
                     except:
-                        continue
-                elif "-pinloud" in message.text:
+                        pass
+                elif flags["pinloud"]:
                     try:
                         await m.pin(disable_notification=False)
-                        pin += 1
+                        pinned += 1
                     except:
-                        continue
+                        pass
+
                 sent += 1
                 await asyncio.sleep(0.2)
+
             except FloodWait as fw:
-                flood_time = int(fw.value)
-                if flood_time > 200:
-                    continue
-                await asyncio.sleep(flood_time)
+                # wait out any FLOOD waits
+                await asyncio.sleep(min(int(fw.value), 200))
             except:
                 continue
+
         try:
-            await message.reply_text(_["broad_3"].format(sent, pin))
+            await message.reply_text(_["broad_3"].format(sent, pinned))
         except:
             pass
 
-    if "-user" in message.text:
-        susr = 0
-        served_users = []
+    # 3b) Broadcast to individual users (if -user)
+    if flags["user"]:
+        ucount = 0
         susers = await get_served_users()
-        for user in susers:
-            served_users.append(int(user["user_id"]))
-        for i in served_users:
+        for row in susers:
+            uid = int(row["user_id"])
             try:
-                m = (
-                    await app.forward_messages(i, y, x)
-                    if message.reply_to_message
-                    else await app.send_message(i, text=query)
-                )
-                susr += 1
+                if to_forward_id:
+                    await app.forward_messages(uid, source_chat, to_forward_id)
+                else:
+                    await app.send_message(uid, query_text)
+                ucount += 1
                 await asyncio.sleep(0.2)
             except FloodWait as fw:
-                flood_time = int(fw.value)
-                if flood_time > 200:
-                    continue
-                await asyncio.sleep(flood_time)
+                await asyncio.sleep(min(int(fw.value), 200))
             except:
-                pass
+                continue
+
         try:
-            await message.reply_text(_["broad_4"].format(susr))
+            await message.reply_text(_["broad_4"].format(ucount))
         except:
             pass
 
-    if "-assistant" in message.text:
-        aw = await message.reply_text(_["broad_5"])
-        text = _["broad_6"]
+    # 3c) Broadcast via each assistant client (if -assistant)
+    if flags["assistant"]:
+        report = _["broad_6"]
+        status_msg = await message.reply_text(_["broad_5"])
         from AudifyMusic.core.userbot import assistants
 
         for num in assistants:
-            sent = 0
-            client = await get_client(num)
-            async for dialog in client.get_dialogs():
+            a_sent = 0
+            client2 = await get_client(num)
+            async for dialog in client2.get_dialogs():
                 try:
-                    await client.forward_messages(
-                        dialog.chat.id, y, x
-                    ) if message.reply_to_message else await client.send_message(
-                        dialog.chat.id, text=query
-                    )
-                    sent += 1
+                    if to_forward_id:
+                        await client2.forward_messages(dialog.chat.id, source_chat, to_forward_id)
+                    else:
+                        await client2.send_message(dialog.chat.id, query_text)
+                    a_sent += 1
                     await asyncio.sleep(3)
                 except FloodWait as fw:
-                    flood_time = int(fw.value)
-                    if flood_time > 200:
-                        continue
-                    await asyncio.sleep(flood_time)
+                    await asyncio.sleep(min(int(fw.value), 200))
                 except:
                     continue
-            text += _["broad_7"].format(num, sent)
+
+            report += _["broad_7"].format(num, a_sent)
+
         try:
-            await aw.edit_text(text)
+            await status_msg.edit_text(report)
         except:
             pass
+
     IS_BROADCASTING = False
 
 
 async def auto_clean():
-    while not await asyncio.sleep(10):
+    while True:
+        await asyncio.sleep(10)
         try:
             served_chats = await get_active_chats()
             for chat_id in served_chats:
                 if chat_id not in adminlist:
                     adminlist[chat_id] = []
+                    # collect admins who can manage video chats
                     async for user in app.get_chat_members(
                         chat_id, filter=ChatMembersFilter.ADMINISTRATORS
                     ):
                         if user.privileges.can_manage_video_chats:
                             adminlist[chat_id].append(user.user.id)
+                    # collect any explicit authusers
                     authusers = await get_authuser_names(chat_id)
-                    for user in authusers:
-                        user_id = await alpha_to_int(user)
-                        adminlist[chat_id].append(user_id)
+                    for u in authusers:
+                        uid = await alpha_to_int(u)
+                        adminlist[chat_id].append(uid)
         except:
-            continue
+            pass
 
-
+# start the background cleaner
 asyncio.create_task(auto_clean())

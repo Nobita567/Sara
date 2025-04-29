@@ -40,6 +40,17 @@ async def init():
     for all_module in ALL_MODULES:
         importlib.import_module("AudifyMusic.plugins" + all_module)
     LOGGER("AudifyMusic.plugins").info("Successfully Imported Modules...")
+        # … right after your plugins are imported …
+    from AudifyMusic.plugins.misc.broadcast import auto_clean
+
+    # now that app.start() has run, we have a loop—schedule the cleaner
+    asyncio.create_task(auto_clean())
+
+    # then continue starting your userbot / voice assistant etc.
+    await userbot.start()
+    await Audify.start()
+    …
+
     await userbot.start()
     await Audify.start()
     try:

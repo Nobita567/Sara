@@ -12,6 +12,10 @@ from AudifyMusic.plugins import ALL_MODULES
 from AudifyMusic.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 
+# import misc plugins so they register on startup
+import AudifyMusic.plugins.misc.broadcast
+import AudifyMusic.plugins.misc.auto_register
+
 async def init():
     if (
         not config.STRING1

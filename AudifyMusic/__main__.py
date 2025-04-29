@@ -49,7 +49,6 @@ async def init():
     # then continue starting your userbot / voice assistant etc.
     await userbot.start()
     await Audify.start()
-    …
 
     await userbot.start()
     await Audify.start()

@@ -17,7 +17,7 @@ from AudifyMusic.utils.decorators.language import language
 from AudifyMusic.utils.formatters import alpha_to_int
 from config import adminlist
 
-IS_BROADCASTING = True
+IS_BROADCASTING = False
 
 
 @app.on_message(filters.command("broadcast") & SUDOERS)

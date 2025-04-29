@@ -1,17 +1,22 @@
-from pyrogram import filters
+from pyrogram import Client
 from pyrogram.types import ChatMemberUpdated
-from AudifyMusic import app
 from AudifyMusic.utils.database import add_served_chat
 
-@app.on_chat_member_updated(filters.my_chat_member())
-async def auto_register_chat(client, update: ChatMemberUpdated):
+# no filters.my_chat_member() here—use the specialized decorator
+@Client.on_chat_member_updated
+async def auto_register_chat(client: Client, update: ChatMemberUpdated):
     """
-    When the bot itself is added to a chat (left → member/admin),
-    persist that chat_id so broadcasts include it automatically.
+    Whenever *this bot* is added to a new group (left/kicked → member/admin),
+    immediately persist that chat_id so broadcasts include it—even without /start.
     """
+    # Only proceed if the update concerns *this* bot
+    me = await client.get_me()
+    if update.new_chat_member.user.id != me.id:
+        return
+
     old_status = update.old_chat_member.status
     new_status = update.new_chat_member.status
 
-    # Only trigger on actual join
+    # detect join event
     if old_status in ("left", "kicked") and new_status in ("member", "administrator"):
         await add_served_chat(update.chat.id)

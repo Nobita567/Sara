@@ -17,6 +17,9 @@ import AudifyMusic.plugins.misc.broadcast
 import AudifyMusic.plugins.misc.auto_register
 from AudifyMusic.plugins.misc.broadcast import auto_clean
 
+# AudifyMusic/__main__.py (near the top, after imports)
+import AudifyMusic.plugins.misc.auto_register
+
 
 async def init():
     # ─── 1) validate assistant session strings ─────────────────────────────
